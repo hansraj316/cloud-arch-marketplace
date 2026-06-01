@@ -1,0 +1,21 @@
+{
+  "name": "cloud-architecture-diagrams",
+  "version": "1.0.0",
+  "description": "Build editable cloud architecture diagrams (Azure/Microsoft, AWS, GCP) with official vendor icons, exported as both .excalidraw and .drawio. Bundles ~3,900 offline icons across AWS, Azure, GCP and the full Microsoft set (Dynamics 365, Power Platform, Fabric, M365, Intune, Entra). Supports text-to-diagram and recreate-from-image, plus native draw.io vector stencils for AWS/GCP.",
+  "author": {
+    "name": "Hansraj"
+  },
+  "license": "MIT",
+  "keywords": [
+    "architecture",
+    "diagram",
+    "azure",
+    "aws",
+    "gcp",
+    "dynamics-365",
+    "power-platform",
+    "excalidraw",
+    "drawio",
+    "cloud"
+  ]
+}

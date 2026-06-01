@@ -1,0 +1,17 @@
+{
+  "name": "cloud-arch-marketplace",
+  "owner": {
+    "name": "Hansraj"
+  },
+  "metadata": {
+    "description": "Cloud architecture diagramming tools for Claude.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "cloud-architecture-diagrams",
+      "source": "./plugins/cloud-architecture-diagrams",
+      "description": "Editable Azure/Microsoft, AWS and GCP architecture diagrams with official icons, output as .excalidraw and .drawio."
+    }
+  ]
+}
