@@ -144,6 +144,60 @@ If nothing scores well, fall back to a labeled box and note it to the user.
 The full searchable index is `references/icon-index.json` (fields: `name`,
 `category`, `path`, `url`, `search`).
 
+## Validation
+
+The spec is validated automatically before rendering, so a malformed spec gives
+a precise, human-readable message instead of a raw Python traceback. You can
+also validate without rendering:
+
+```bash
+python scripts/build_diagram.py spec.json --validate
+```
+
+This exits non-zero and prints one line per problem, naming the offending
+node/edge and the exact issue, for example:
+
+```
+Spec validation failed:
+  - node 'app': missing required field 'height'
+  - edges[3]: dangling edge — 'to' references unknown node id 'ghost'
+  - duplicate node id 'db'
+```
+
+Checks include: required `nodes` array; unique node `id`s; numeric, positive
+`width`/`height`; correct field types (e.g. `width` must not be a string);
+every edge `from`/`to` referencing an existing node (no silently dropped edges);
+and a valid `dir`. The validator is pure Python (no dependencies). See
+`scripts/spec_schema.py`.
+
+## Auto-layout (skip hand-computed coordinates)
+
+Coordinates are optional. If any node omits `x`/`y`/`width`/`height`, an
+auto-layout pass runs and computes positions from the edge graph: a layered
+(hierarchical) placement for connected nodes — so `A → B → C` flows
+left-to-right across successive layers — and a grid for disconnected nodes, with
+overlap avoidance. Force layout for the whole spec with `--layout`.
+
+Backward compatible: any node that specifies all four coordinate fields is left
+exactly where you put it. A minimal layout-driven spec:
+
+```json
+{
+  "title": "Auto-laid-out flow",
+  "nodes": [
+    {"id": "user", "title": "User", "icon": "User", "card": false},
+    {"id": "fn", "title": "Function App", "icon": "Function Apps"},
+    {"id": "db", "title": "Dataverse", "icon": "Dataverse"}
+  ],
+  "edges": [
+    {"from": "user", "to": "fn"},
+    {"from": "fn", "to": "db"}
+  ]
+}
+```
+
+See `scripts/layout.py`.
+
 ## Minimal example
 
 ```json

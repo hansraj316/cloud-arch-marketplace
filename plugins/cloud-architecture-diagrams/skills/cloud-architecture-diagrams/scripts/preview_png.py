@@ -15,6 +15,7 @@ Usage:
 
 Requires: cairosvg, pillow  (pip install cairosvg pillow --break-system-packages)
 """
+
 import argparse
 import base64
 import io
@@ -28,10 +29,16 @@ from PIL import Image, ImageDraw, ImageFont
 
 def load_font(size: int, bold: bool):
     candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold
-        else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf" if bold
-        else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        (
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+            if bold
+            else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        ),
+        (
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+            if bold
+            else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+        ),
     ]
     for c in candidates:
         if Path(c).exists():
@@ -48,6 +55,7 @@ def rounded_rect(d, box, r, outline, width, fill, dashed):
     else:
         # approximate dashed border with segments along the perimeter
         dash, gap = 8, 6
+
         def seg(x0, y0, x1, y1):
             length = math.hypot(x1 - x0, y1 - y0)
             if length == 0:
@@ -57,9 +65,11 @@ def rounded_rect(d, box, r, outline, width, fill, dashed):
             while pos < length:
                 a = pos
                 b = min(pos + dash, length)
-                d.line([x0 + ux * a, y0 + uy * a, x0 + ux * b, y0 + uy * b],
-                       fill=outline, width=width)
+                d.line(
+                    [x0 + ux * a, y0 + uy * a, x0 + ux * b, y0 + uy * b], fill=outline, width=width
+                )
                 pos += dash + gap
+
         seg(x0 + r, y0, x1 - r, y0)
         seg(x1, y0 + r, x1, y1 - r)
         seg(x1 - r, y1, x0 + r, y1)
@@ -90,11 +100,16 @@ def render(doc: dict, scale: float) -> Image.Image:
         t = e["type"]
         if t == "rectangle":
             rounded_rect(
-                d, [S(e["x"]), S(e["y"]), S(e["x"] + e["width"]), S(e["y"] + e["height"])],
-                r=10 * scale, outline=e.get("strokeColor", "#1e1e1e"),
+                d,
+                [S(e["x"]), S(e["y"]), S(e["x"] + e["width"]), S(e["y"] + e["height"])],
+                r=10 * scale,
+                outline=e.get("strokeColor", "#1e1e1e"),
                 width=max(1, int(e.get("strokeWidth", 1) * scale)),
-                fill=None if e.get("backgroundColor") == "transparent" else e.get("backgroundColor"),
-                dashed=e.get("strokeStyle") == "dashed")
+                fill=(
+                    None if e.get("backgroundColor") == "transparent" else e.get("backgroundColor")
+                ),
+                dashed=e.get("strokeStyle") == "dashed",
+            )
         elif t == "ellipse":
             box = [S(e["x"]), S(e["y"]), S(e["x"] + e["width"]), S(e["y"] + e["height"])]
             d.ellipse(box, fill=e.get("backgroundColor"), outline=e.get("strokeColor"))
@@ -104,14 +119,22 @@ def render(doc: dict, scale: float) -> Image.Image:
             if not f:
                 continue
             b64 = f["dataURL"].split(",", 1)[1]
-            png = cairosvg.svg2png(bytestring=base64.b64decode(b64),
-                                   output_width=int(S(e["width"])),
-                                   output_height=int(S(e["height"])))
+            png = cairosvg.svg2png(
+                bytestring=base64.b64decode(b64),
+                output_width=int(S(e["width"])),
+                output_height=int(S(e["height"])),
+            )
             icon = Image.open(io.BytesIO(png)).convert("RGBA")
-            img.paste(icon, (int(S(e["x"])), int(S(e["y"])), ), icon)
+            img.paste(
+                icon,
+                (
+                    int(S(e["x"])),
+                    int(S(e["y"])),
+                ),
+                icon,
+            )
         elif t == "text":
-            font = load_font(max(8, int(e.get("fontSize", 16) * scale)),
-                             bold=False)
+            font = load_font(max(8, int(e.get("fontSize", 16) * scale)), bold=False)
             color = e.get("strokeColor", "#1e1e1e")
             d.text((S(e["x"]), S(e["y"])), e.get("text", ""), fill=color, font=font)
         elif t == "arrow":

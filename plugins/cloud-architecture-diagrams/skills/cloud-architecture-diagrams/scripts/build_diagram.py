@@ -43,6 +43,7 @@ USAGE
         -> mydiagram.excalidraw  and  mydiagram.drawio
     python build_diagram.py spec.json --out-prefix d --cache ./_icons
 """
+
 import argparse
 import base64
 import html
@@ -50,12 +51,15 @@ import json
 import re
 import sys
 import time
-import urllib.request
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from find_icon import search as icon_search, score as icon_score
+from find_icon import score as icon_score
+from find_icon import search as icon_search
+from layout import apply_layout, needs_layout
+from spec_schema import ValidationError, validate
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 MIN_SHAPE_SCORE = 0.9
@@ -76,8 +80,7 @@ def resolve_drawio_shape(node: dict, providers):
     if isinstance(pin, str):
         byk = {s["key"]: s for s in _SHAPES}
         s = byk.get(pin, {})
-        return {"key": pin, "color": s.get("color"),
-                "provider": s.get("shape_provider", "aws")}
+        return {"key": pin, "color": s.get("color"), "provider": s.get("shape_provider", "aws")}
     q = node.get("icon")
     if not q or not _SHAPES:
         return None
@@ -91,16 +94,17 @@ def resolve_drawio_shape(node: dict, providers):
     best = max(pool, key=lambda s: icon_score(q, s))
     if icon_score(q, best) < MIN_SHAPE_SCORE:
         return None
-    return {"key": best["key"], "color": best.get("color"),
-            "provider": best["shape_provider"]}
+    return {"key": best["key"], "color": best.get("color"), "provider": best["shape_provider"]}
+
 
 ICON_CACHE = Path("./_icon_cache")
-MIN_SCORE = 0.9          # below this, treat as "no confident icon"
-ICON_PAD = 10            # px padding of icon inside a card
+MIN_SCORE = 0.9  # below this, treat as "no confident icon"
+ICON_PAD = 10  # px padding of icon inside a card
 
 # ----------------------------------------------------------------------------
 # Icon fetching
 # ----------------------------------------------------------------------------
+
 
 def fetch_svg(url: str, cache: Path) -> str | None:
     """Return raw SVG text (cached on disk)."""
@@ -140,7 +144,7 @@ def resolve_icon(node: dict, cache: Path, providers=None) -> tuple[str | None, s
         best = hits[0] if hits else None
         return None, f"(weak match for '{q}': {best['name'] if best else 'none'} -> labeled box)"
     top = hits[0]
-    if top.get("file"):                       # bundled local icon (aws / azure)
+    if top.get("file"):  # bundled local icon (aws / azure)
         return read_local_svg(top["file"]), f"{q} -> {top['name']} [{top.get('provider')}]"
     return fetch_svg(top["url"], cache), f"{q} -> {top['name']} [{top.get('provider')}]"
 
@@ -159,9 +163,9 @@ DESC_COLOR = "#5f6368"
 def anchor(node: dict, side: str) -> tuple[float, float]:
     x, y, w, h = node["x"], node["y"], node["width"], node["height"]
     return {
-        "left":   (x, y + h / 2),
-        "right":  (x + w, y + h / 2),
-        "top":    (x + w / 2, y),
+        "left": (x, y + h / 2),
+        "right": (x + w, y + h / 2),
+        "top": (x + w / 2, y),
         "bottom": (x + w / 2, y + h),
         "center": (x + w / 2, y + h / 2),
     }[side]
@@ -202,16 +206,32 @@ def build_primitives(spec: dict, cache: Path) -> list[dict]:
 
     # zones first (drawn behind)
     for z in spec.get("zones", []):
-        prims.append({"kind": "rect", "x": z["x"], "y": z["y"],
-                      "w": z["width"], "h": z["height"],
-                      "fill": z.get("fill", "none"),
-                      "stroke": z.get("color", ZONE_STROKE),
-                      "dashed": z.get("style", "dashed") == "dashed",
-                      "rounded": True, "opacity": z.get("opacity", 100)})
+        prims.append(
+            {
+                "kind": "rect",
+                "x": z["x"],
+                "y": z["y"],
+                "w": z["width"],
+                "h": z["height"],
+                "fill": z.get("fill", "none"),
+                "stroke": z.get("color", ZONE_STROKE),
+                "dashed": z.get("style", "dashed") == "dashed",
+                "rounded": True,
+                "opacity": z.get("opacity", 100),
+            }
+        )
         if z.get("label"):
-            prims.append({"kind": "text", "x": z["x"] + 16, "y": z["y"] + 12,
-                          "text": z["label"], "size": 20, "bold": True,
-                          "color": TITLE_COLOR})
+            prims.append(
+                {
+                    "kind": "text",
+                    "x": z["x"] + 16,
+                    "y": z["y"] + 12,
+                    "text": z["label"],
+                    "size": 20,
+                    "bold": True,
+                    "color": TITLE_COLOR,
+                }
+            )
 
     nodes_by_id = {n["id"]: n for n in spec.get("nodes", [])}
 
@@ -223,21 +243,37 @@ def build_primitives(spec: dict, cache: Path) -> list[dict]:
             continue
         pts = route(a, b, e.get("waypoints"))
         d = e.get("dir", "to")
-        prims.append({"kind": "arrow", "points": pts,
-                      "color": e.get("color", "#5f6368"),
-                      "start_head": d in ("from", "both"),
-                      "end_head": d in ("to", "both"),
-                      "label": e.get("label", ""),
-                      "dashed": e.get("style") == "dashed"})
+        prims.append(
+            {
+                "kind": "arrow",
+                "points": pts,
+                "color": e.get("color", "#5f6368"),
+                "start_head": d in ("from", "both"),
+                "end_head": d in ("to", "both"),
+                "label": e.get("label", ""),
+                "dashed": e.get("style") == "dashed",
+            }
+        )
 
     # nodes on top
     for n in spec.get("nodes", []):
         x, y, w, h = n["x"], n["y"], n["width"], n["height"]
         card = n.get("card", True)
         if card:
-            prims.append({"kind": "rect", "x": x, "y": y, "w": w, "h": h,
-                          "fill": CARD_FILL, "stroke": CARD_STROKE,
-                          "dashed": False, "rounded": True, "opacity": 100})
+            prims.append(
+                {
+                    "kind": "rect",
+                    "x": x,
+                    "y": y,
+                    "w": w,
+                    "h": h,
+                    "fill": CARD_FILL,
+                    "stroke": CARD_STROKE,
+                    "dashed": False,
+                    "rounded": True,
+                    "opacity": 100,
+                }
+            )
         b64, note = resolve_icon(n, cache, providers)
         shape = resolve_drawio_shape(n, providers) if use_shapes else None
         if shape:
@@ -247,35 +283,76 @@ def build_primitives(spec: dict, cache: Path) -> list[dict]:
         if b64 or shape:
             ix = x + ICON_PAD if card else x + (w - icon_sz) / 2
             iy = y + (h - icon_sz) / 2 if card else y
-            prims.append({"kind": "image", "x": ix, "y": iy,
-                          "w": icon_sz, "h": icon_sz, "svg": b64,
-                          "drawio_shape": shape})
+            prims.append(
+                {
+                    "kind": "image",
+                    "x": ix,
+                    "y": iy,
+                    "w": icon_sz,
+                    "h": icon_sz,
+                    "svg": b64,
+                    "drawio_shape": shape,
+                }
+            )
             text_x = ix + icon_sz + 12 if card else x
         else:
             text_x = x + 14 if card else x
         # title + optional description
         if card:
-            prims.append({"kind": "text", "x": text_x, "y": y + 16,
-                          "text": n.get("title", ""), "size": 16, "bold": True,
-                          "color": TITLE_COLOR})
+            prims.append(
+                {
+                    "kind": "text",
+                    "x": text_x,
+                    "y": y + 16,
+                    "text": n.get("title", ""),
+                    "size": 16,
+                    "bold": True,
+                    "color": TITLE_COLOR,
+                }
+            )
             if n.get("desc"):
-                prims.append({"kind": "text", "x": text_x, "y": y + 40,
-                              "text": n["desc"], "size": 13, "bold": False,
-                              "color": DESC_COLOR})
+                prims.append(
+                    {
+                        "kind": "text",
+                        "x": text_x,
+                        "y": y + 40,
+                        "text": n["desc"],
+                        "size": 13,
+                        "bold": False,
+                        "color": DESC_COLOR,
+                    }
+                )
         else:
-            prims.append({"kind": "text", "x": x + w / 2, "y": y + h + 6,
-                          "text": n.get("title", ""), "size": 14, "bold": True,
-                          "color": TITLE_COLOR, "center": True})
+            prims.append(
+                {
+                    "kind": "text",
+                    "x": x + w / 2,
+                    "y": y + h + 6,
+                    "text": n.get("title", ""),
+                    "size": 14,
+                    "bold": True,
+                    "color": TITLE_COLOR,
+                    "center": True,
+                }
+            )
 
     # numbered badges on very top
     for badge in spec.get("badges", []):
-        prims.append({"kind": "badge", "x": badge["x"], "y": badge["y"],
-                      "n": badge["n"]})
+        prims.append({"kind": "badge", "x": badge["x"], "y": badge["y"], "n": badge["n"]})
 
     if spec.get("title"):
-        prims.insert(0, {"kind": "text", "x": 24, "y": 16,
-                         "text": spec["title"], "size": 26, "bold": True,
-                         "color": TITLE_COLOR})
+        prims.insert(
+            0,
+            {
+                "kind": "text",
+                "x": 24,
+                "y": 16,
+                "text": spec["title"],
+                "size": 26,
+                "bold": True,
+                "color": TITLE_COLOR,
+            },
+        )
 
     print("Icon resolution:\n  " + "\n  ".join(notes), file=sys.stderr)
     return prims
@@ -285,21 +362,43 @@ def build_primitives(spec: dict, cache: Path) -> list[dict]:
 # Serializer: Excalidraw
 # ----------------------------------------------------------------------------
 
+
 def _seed():
     _seed.n += 1
     return _seed.n * 100003 % 2147483647
-_seed.n = 0
+
+
+_seed.n = 0  # type: ignore[attr-defined]
 
 
 def _ex_base(t, x, y, w, h):
-    return {"type": t, "id": f"el{_seed()}", "x": x, "y": y, "width": w,
-            "height": h, "angle": 0, "strokeColor": "#1e1e1e",
-            "backgroundColor": "transparent", "fillStyle": "solid",
-            "strokeWidth": 1, "strokeStyle": "solid", "roughness": 0,
-            "opacity": 100, "groupIds": [], "frameId": None,
-            "roundness": None, "seed": _seed(), "version": 1,
-            "versionNonce": _seed(), "isDeleted": False, "boundElements": [],
-            "updated": 1, "link": None, "locked": False}
+    return {
+        "type": t,
+        "id": f"el{_seed()}",
+        "x": x,
+        "y": y,
+        "width": w,
+        "height": h,
+        "angle": 0,
+        "strokeColor": "#1e1e1e",
+        "backgroundColor": "transparent",
+        "fillStyle": "solid",
+        "strokeWidth": 1,
+        "strokeStyle": "solid",
+        "roughness": 0,
+        "opacity": 100,
+        "groupIds": [],
+        "frameId": None,
+        "roundness": None,
+        "seed": _seed(),
+        "version": 1,
+        "versionNonce": _seed(),
+        "isDeleted": False,
+        "boundElements": [],
+        "updated": 1,
+        "link": None,
+        "locked": False,
+    }
 
 
 def to_excalidraw(prims: list[dict]) -> str:
@@ -319,14 +418,23 @@ def to_excalidraw(prims: list[dict]) -> str:
                 continue  # native-draw.io-shape-only node; nothing to embed here
             fid = f"icon{_seed()}"
             b64 = base64.b64encode(p["svg"].encode("utf-8")).decode("ascii")
-            files[fid] = {"mimeType": "image/svg+xml", "id": fid,
-                          "dataURL": "data:image/svg+xml;base64," + b64,
-                          "created": int(time.time() * 1000),
-                          "lastRetrieved": int(time.time() * 1000)}
+            files[fid] = {
+                "mimeType": "image/svg+xml",
+                "id": fid,
+                "dataURL": "data:image/svg+xml;base64," + b64,
+                "created": int(time.time() * 1000),
+                "lastRetrieved": int(time.time() * 1000),
+            }
             e = _ex_base("image", p["x"], p["y"], p["w"], p["h"])
-            e.update({"fileId": fid, "status": "saved", "scale": [1, 1],
-                      "strokeColor": "transparent",
-                      "backgroundColor": "transparent"})
+            e.update(
+                {
+                    "fileId": fid,
+                    "status": "saved",
+                    "scale": [1, 1],
+                    "strokeColor": "transparent",
+                    "backgroundColor": "transparent",
+                }
+            )
             els.append(e)
         elif p["kind"] == "text":
             size = p["size"]
@@ -334,11 +442,20 @@ def to_excalidraw(prims: list[dict]) -> str:
             w = max(8, len(txt) * size * 0.55)
             x = p["x"] - w / 2 if p.get("center") else p["x"]
             e = _ex_base("text", x, p["y"], w, size * 1.25)
-            e.update({"text": txt, "fontSize": size,
-                      "fontFamily": 2, "textAlign": "center" if p.get("center") else "left",
-                      "verticalAlign": "top", "strokeColor": p["color"],
-                      "containerId": None, "originalText": txt,
-                      "lineHeight": 1.25, "baseline": size})
+            e.update(
+                {
+                    "text": txt,
+                    "fontSize": size,
+                    "fontFamily": 2,
+                    "textAlign": "center" if p.get("center") else "left",
+                    "verticalAlign": "top",
+                    "strokeColor": p["color"],
+                    "containerId": None,
+                    "originalText": txt,
+                    "lineHeight": 1.25,
+                    "baseline": size,
+                }
+            )
             els.append(e)
         elif p["kind"] == "arrow":
             pts = p["points"]
@@ -347,49 +464,79 @@ def to_excalidraw(prims: list[dict]) -> str:
             xs = [px for px, _ in pts]
             ys = [py for _, py in pts]
             e = _ex_base("arrow", x0, y0, max(xs) - min(xs), max(ys) - min(ys))
-            e.update({"points": rel, "strokeColor": p["color"],
-                      "strokeWidth": 2,
-                      "strokeStyle": "dashed" if p["dashed"] else "solid",
-                      "startArrowhead": "arrow" if p["start_head"] else None,
-                      "endArrowhead": "arrow" if p["end_head"] else None,
-                      "lastCommittedPoint": None, "startBinding": None,
-                      "endBinding": None, "roundness": {"type": 2}})
+            e.update(
+                {
+                    "points": rel,
+                    "strokeColor": p["color"],
+                    "strokeWidth": 2,
+                    "strokeStyle": "dashed" if p["dashed"] else "solid",
+                    "startArrowhead": "arrow" if p["start_head"] else None,
+                    "endArrowhead": "arrow" if p["end_head"] else None,
+                    "lastCommittedPoint": None,
+                    "startBinding": None,
+                    "endBinding": None,
+                    "roundness": {"type": 2},
+                }
+            )
             els.append(e)
             if p.get("label"):
                 mid = pts[len(pts) // 2]
                 size = 12
                 w = max(8, len(p["label"]) * size * 0.55)
                 t = _ex_base("text", mid[0] - w / 2, mid[1] - 18, w, size * 1.25)
-                t.update({"text": p["label"], "fontSize": size, "fontFamily": 2,
-                          "textAlign": "center", "verticalAlign": "top",
-                          "strokeColor": p["color"], "containerId": None,
-                          "originalText": p["label"], "lineHeight": 1.25,
-                          "baseline": size})
+                t.update(
+                    {
+                        "text": p["label"],
+                        "fontSize": size,
+                        "fontFamily": 2,
+                        "textAlign": "center",
+                        "verticalAlign": "top",
+                        "strokeColor": p["color"],
+                        "containerId": None,
+                        "originalText": p["label"],
+                        "lineHeight": 1.25,
+                        "baseline": size,
+                    }
+                )
                 els.append(t)
         elif p["kind"] == "badge":
             d = 26
             e = _ex_base("ellipse", p["x"], p["y"], d, d)
-            e.update({"backgroundColor": "#1a1a1a", "fillStyle": "solid",
-                      "strokeColor": "#1a1a1a"})
+            e.update({"backgroundColor": "#1a1a1a", "fillStyle": "solid", "strokeColor": "#1a1a1a"})
             els.append(e)
             txt = str(p["n"])
             t = _ex_base("text", p["x"] + d / 2 - 5, p["y"] + 5, 12, 16)
-            t.update({"text": txt, "fontSize": 14, "fontFamily": 2,
-                      "textAlign": "center", "verticalAlign": "middle",
-                      "strokeColor": "#ffffff", "containerId": None,
-                      "originalText": txt, "lineHeight": 1.25, "baseline": 14})
+            t.update(
+                {
+                    "text": txt,
+                    "fontSize": 14,
+                    "fontFamily": 2,
+                    "textAlign": "center",
+                    "verticalAlign": "middle",
+                    "strokeColor": "#ffffff",
+                    "containerId": None,
+                    "originalText": txt,
+                    "lineHeight": 1.25,
+                    "baseline": 14,
+                }
+            )
             els.append(t)
 
-    doc = {"type": "excalidraw", "version": 2,
-           "source": "msicons-architecture-skill", "elements": els,
-           "appState": {"viewBackgroundColor": "#ffffff", "gridSize": None},
-           "files": files}
+    doc = {
+        "type": "excalidraw",
+        "version": 2,
+        "source": "msicons-architecture-skill",
+        "elements": els,
+        "appState": {"viewBackgroundColor": "#ffffff", "gridSize": None},
+        "files": files,
+    }
     return json.dumps(doc, indent=2)
 
 
 # ----------------------------------------------------------------------------
 # Serializer: draw.io (mxGraph XML)
 # ----------------------------------------------------------------------------
+
 
 def _esc(s: str) -> str:
     return html.escape(s, quote=True)
@@ -405,14 +552,18 @@ def to_drawio(prims: list[dict]) -> str:
     for p in prims:
         if p["kind"] == "rect":
             fill = "none" if p["fill"] == "none" else p["fill"]
-            style = (f"rounded={1 if p['rounded'] else 0};whiteSpace=wrap;html=1;"
-                     f"fillColor={fill};strokeColor={p['stroke']};"
-                     f"{'dashed=1;' if p['dashed'] else ''}"
-                     f"opacity={p.get('opacity',100)};")
-            cells.append(f'<mxCell id="{nid()}" value="" style="{_esc(style)}" '
-                         f'vertex="1" parent="1"><mxGeometry x="{p["x"]}" '
-                         f'y="{p["y"]}" width="{p["w"]}" height="{p["h"]}" '
-                         f'as="geometry"/></mxCell>')
+            style = (
+                f"rounded={1 if p['rounded'] else 0};whiteSpace=wrap;html=1;"
+                f"fillColor={fill};strokeColor={p['stroke']};"
+                f"{'dashed=1;' if p['dashed'] else ''}"
+                f"opacity={p.get('opacity',100)};"
+            )
+            cells.append(
+                f'<mxCell id="{nid()}" value="" style="{_esc(style)}" '
+                f'vertex="1" parent="1"><mxGeometry x="{p["x"]}" '
+                f'y="{p["y"]}" width="{p["w"]}" height="{p["h"]}" '
+                f'as="geometry"/></mxCell>'
+            )
         elif p["kind"] == "image":
             shp = p.get("drawio_shape")
             if shp:
@@ -420,56 +571,79 @@ def to_drawio(prims: list[dict]) -> str:
                 key, color, prov = shp["key"], shp.get("color"), shp["provider"]
                 if prov == "aws":
                     pkg = key.rsplit(".", 1)[0]  # mxgraph.aws4
-                    style = ("sketch=0;outlineConnect=0;fontColor=#232F3E;"
-                             "gradientColor=none;fillColor=" + (color or "#232F3E") +
-                             ";strokeColor=none;dashed=0;verticalLabelPosition=bottom;"
-                             "verticalAlign=top;align=center;html=1;fontSize=12;"
-                             "fontStyle=0;aspect=fixed;shape=" + pkg +
-                             ".resourceIcon;resIcon=" + key + ";")
+                    style = (
+                        "sketch=0;outlineConnect=0;fontColor=#232F3E;"
+                        "gradientColor=none;fillColor="
+                        + (color or "#232F3E")
+                        + ";strokeColor=none;dashed=0;verticalLabelPosition=bottom;"
+                        "verticalAlign=top;align=center;html=1;fontSize=12;"
+                        "fontStyle=0;aspect=fixed;shape="
+                        + pkg
+                        + ".resourceIcon;resIcon="
+                        + key
+                        + ";"
+                    )
                 elif prov == "gcp":  # self-colored stencils
-                    style = ("sketch=0;outlineConnect=0;html=1;"
-                             "verticalLabelPosition=bottom;verticalAlign=top;"
-                             "align=center;aspect=fixed;shape=" + key + ";")
+                    style = (
+                        "sketch=0;outlineConnect=0;html=1;"
+                        "verticalLabelPosition=bottom;verticalAlign=top;"
+                        "align=center;aspect=fixed;shape=" + key + ";"
+                    )
                 else:  # azure (monochrome) -> give it a fill
-                    style = ("sketch=0;html=1;aspect=fixed;strokeColor=none;"
-                             "fillColor=" + (color or "#0078D4") +
-                             ";verticalLabelPosition=bottom;verticalAlign=top;"
-                             "align=center;shape=" + key + ";")
-                cells.append(f'<mxCell id="{nid()}" value="" style="{_esc(style)}" '
-                             f'vertex="1" parent="1"><mxGeometry x="{p["x"]}" '
-                             f'y="{p["y"]}" width="{p["w"]}" height="{p["h"]}" '
-                             f'as="geometry"/></mxCell>')
+                    style = (
+                        "sketch=0;html=1;aspect=fixed;strokeColor=none;"
+                        "fillColor="
+                        + (color or "#0078D4")
+                        + ";verticalLabelPosition=bottom;verticalAlign=top;"
+                        "align=center;shape=" + key + ";"
+                    )
+                cells.append(
+                    f'<mxCell id="{nid()}" value="" style="{_esc(style)}" '
+                    f'vertex="1" parent="1"><mxGeometry x="{p["x"]}" '
+                    f'y="{p["y"]}" width="{p["w"]}" height="{p["h"]}" '
+                    f'as="geometry"/></mxCell>'
+                )
                 continue
             if not p.get("svg"):
                 continue
             # Percent-encode the raw SVG so the data URI contains no ';' or '='
             # that would break mxGraph's style-string parser (key=val;key=val).
             enc = urllib.parse.quote(p["svg"], safe="")
-            style = ("shape=image;html=1;imageAspect=0;aspect=fixed;"
-                     "verticalAlign=top;strokeColor=none;"
-                     "image=data:image/svg+xml," + enc + ";")
-            cells.append(f'<mxCell id="{nid()}" value="" style="{_esc(style)}" '
-                         f'vertex="1" parent="1"><mxGeometry x="{p["x"]}" '
-                         f'y="{p["y"]}" width="{p["w"]}" height="{p["h"]}" '
-                         f'as="geometry"/></mxCell>')
+            style = (
+                "shape=image;html=1;imageAspect=0;aspect=fixed;"
+                "verticalAlign=top;strokeColor=none;"
+                "image=data:image/svg+xml," + enc + ";"
+            )
+            cells.append(
+                f'<mxCell id="{nid()}" value="" style="{_esc(style)}" '
+                f'vertex="1" parent="1"><mxGeometry x="{p["x"]}" '
+                f'y="{p["y"]}" width="{p["w"]}" height="{p["h"]}" '
+                f'as="geometry"/></mxCell>'
+            )
         elif p["kind"] == "text":
             align = "center" if p.get("center") else "left"
-            style = (f"text;html=1;align={align};verticalAlign=top;"
-                     f"fontColor={p['color']};fontSize={p['size']};"
-                     f"{'fontStyle=1;' if p['bold'] else ''}")
+            style = (
+                f"text;html=1;align={align};verticalAlign=top;"
+                f"fontColor={p['color']};fontSize={p['size']};"
+                f"{'fontStyle=1;' if p['bold'] else ''}"
+            )
             w = max(40, len(p["text"]) * p["size"] * 0.6)
             x = p["x"] - w / 2 if p.get("center") else p["x"]
-            cells.append(f'<mxCell id="{nid()}" value="{_esc(p["text"])}" '
-                         f'style="{_esc(style)}" vertex="1" parent="1">'
-                         f'<mxGeometry x="{x}" y="{p["y"]}" width="{w}" '
-                         f'height="{p["size"]*1.4:.0f}" as="geometry"/></mxCell>')
+            cells.append(
+                f'<mxCell id="{nid()}" value="{_esc(p["text"])}" '
+                f'style="{_esc(style)}" vertex="1" parent="1">'
+                f'<mxGeometry x="{x}" y="{p["y"]}" width="{w}" '
+                f'height="{p["size"]*1.4:.0f}" as="geometry"/></mxCell>'
+            )
         elif p["kind"] == "arrow":
             pts = p["points"]
             startA = "classic" if p["start_head"] else "none"
             endA = "classic" if p["end_head"] else "none"
-            style = (f"endArrow={endA};startArrow={startA};html=1;rounded=1;"
-                     f"strokeColor={p['color']};strokeWidth=2;"
-                     f"{'dashed=1;' if p['dashed'] else ''}")
+            style = (
+                f"endArrow={endA};startArrow={startA};html=1;rounded=1;"
+                f"strokeColor={p['color']};strokeWidth=2;"
+                f"{'dashed=1;' if p['dashed'] else ''}"
+            )
             mids = "".join(f'<mxPoint x="{x}" y="{y}" />' for x, y in pts[1:-1])
             cells.append(
                 f'<mxCell id="{nid()}" value="{_esc(p.get("label",""))}" '
@@ -477,16 +651,21 @@ def to_drawio(prims: list[dict]) -> str:
                 f'<mxGeometry relative="1" as="geometry">'
                 f'<mxPoint x="{pts[0][0]}" y="{pts[0][1]}" as="sourcePoint"/>'
                 f'<mxPoint x="{pts[-1][0]}" y="{pts[-1][1]}" as="targetPoint"/>'
-                f'<Array as="points">{mids}</Array></mxGeometry></mxCell>')
+                f'<Array as="points">{mids}</Array></mxGeometry></mxCell>'
+            )
         elif p["kind"] == "badge":
             d = 26
-            style = ("ellipse;whiteSpace=wrap;html=1;fillColor=#1a1a1a;"
-                     "strokeColor=#1a1a1a;fontColor=#ffffff;fontStyle=1;"
-                     "fontSize=14;")
-            cells.append(f'<mxCell id="{nid()}" value="{p["n"]}" '
-                         f'style="{_esc(style)}" vertex="1" parent="1">'
-                         f'<mxGeometry x="{p["x"]}" y="{p["y"]}" width="{d}" '
-                         f'height="{d}" as="geometry"/></mxCell>')
+            style = (
+                "ellipse;whiteSpace=wrap;html=1;fillColor=#1a1a1a;"
+                "strokeColor=#1a1a1a;fontColor=#ffffff;fontStyle=1;"
+                "fontSize=14;"
+            )
+            cells.append(
+                f'<mxCell id="{nid()}" value="{p["n"]}" '
+                f'style="{_esc(style)}" vertex="1" parent="1">'
+                f'<mxGeometry x="{p["x"]}" y="{p["y"]}" width="{d}" '
+                f'height="{d}" as="geometry"/></mxCell>'
+            )
 
     body = "\n        ".join(cells)
     return (
@@ -495,14 +674,14 @@ def to_drawio(prims: list[dict]) -> str:
         '    <mxGraphModel dx="1422" dy="800" grid="1" gridSize="10" '
         'guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" '
         'pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">\n'
-        '      <root>\n'
+        "      <root>\n"
         '        <mxCell id="0" />\n'
         '        <mxCell id="1" parent="0" />\n'
-        f'        {body}\n'
-        '      </root>\n'
-        '    </mxGraphModel>\n'
-        '  </diagram>\n'
-        '</mxfile>\n'
+        f"        {body}\n"
+        "      </root>\n"
+        "    </mxGraphModel>\n"
+        "  </diagram>\n"
+        "</mxfile>\n"
     )
 
 
@@ -510,23 +689,72 @@ def to_drawio(prims: list[dict]) -> str:
 # main
 # ----------------------------------------------------------------------------
 
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("spec", help="path to spec JSON (or - for stdin)")
     ap.add_argument("--out-prefix", default="architecture")
     ap.add_argument("--cache", default=str(ICON_CACHE))
     ap.add_argument("--only", choices=["excalidraw", "drawio"], help="emit one format")
-    ap.add_argument("--drawio-shapes", action="store_true",
-                    help="use draw.io native vector stencils in the .drawio output "
-                         "(AWS/GCP/Azure) instead of embedded SVG; Excalidraw still "
-                         "uses embedded SVG")
+    ap.add_argument(
+        "--drawio-shapes",
+        action="store_true",
+        help="use draw.io native vector stencils in the .drawio output "
+        "(AWS/GCP/Azure) instead of embedded SVG; Excalidraw still "
+        "uses embedded SVG",
+    )
+    ap.add_argument(
+        "--validate",
+        action="store_true",
+        help="validate the spec and report human-readable errors "
+        "without rendering; exits non-zero on any error",
+    )
+    ap.add_argument(
+        "--layout",
+        action="store_true",
+        help="run the auto-layout pass for every node (compute "
+        "positions from the edge graph). Nodes that already "
+        "specify all coordinates are left untouched",
+    )
     args = ap.parse_args()
 
     raw = sys.stdin.read() if args.spec == "-" else Path(args.spec).read_text()
-    spec = json.loads(raw)
+    try:
+        spec = json.loads(raw)
+    except json.JSONDecodeError as e:
+        print(f"Spec is not valid JSON: {e}", file=sys.stderr)
+        sys.exit(2)
+
+    # --validate: report errors cleanly (no traceback) and stop.
+    if args.validate:
+        errors = validate(spec)
+        if errors:
+            print("Spec validation failed:", file=sys.stderr)
+            for msg in errors:
+                print(f"  - {msg}", file=sys.stderr)
+            sys.exit(1)
+        print("Spec is valid.")
+        return
+
+    # Always validate before rendering so a bad spec yields a clear message
+    # instead of a raw traceback deep in the rendering path.
+    try:
+        from spec_schema import validate_or_raise
+
+        validate_or_raise(spec)
+    except ValidationError as e:
+        print("Spec validation failed:", file=sys.stderr)
+        for msg in e.messages:
+            print(f"  - {msg}", file=sys.stderr)
+        sys.exit(1)
+
     if args.drawio_shapes:
         spec["drawio_shapes"] = True
     cache = Path(args.cache)
+
+    # Auto-layout when requested or when any node omits coordinates.
+    if args.layout or needs_layout(spec):
+        apply_layout(spec)
 
     prims = build_primitives(spec, cache)
 
