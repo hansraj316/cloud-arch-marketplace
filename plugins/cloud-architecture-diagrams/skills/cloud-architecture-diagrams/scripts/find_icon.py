@@ -19,12 +19,13 @@ Usage:
 Exit code is 0 even on weak matches; inspect the score. A score < ~0.35 usually
 means "no good icon — fall back to a plain labeled box."
 """
+
 import argparse
 import json
 import re
 import sys
-import urllib.request
 import urllib.parse
+import urllib.request
 from difflib import SequenceMatcher
 from pathlib import Path
 
@@ -34,12 +35,33 @@ SITE = "https://msicons.com"
 
 # Brand/product categories an architecture diagram usually wants.
 PREFERRED = {
-    "power-platform", "dynamics-365", "Copilot-studio", "agent-365",
-    "fabric", "entra", "intune", "microsoft-teams", "sharepoint", "Planner",
-    "ai-machine-learning", "analytics", "app-services", "compute",
-    "containers", "databases", "integration", "iot", "networking",
-    "security", "storage", "identity", "web", "devops",
-    "management-governance", "monitor", "azure-ecosystem",
+    "power-platform",
+    "dynamics-365",
+    "Copilot-studio",
+    "agent-365",
+    "fabric",
+    "entra",
+    "intune",
+    "microsoft-teams",
+    "sharepoint",
+    "Planner",
+    "ai-machine-learning",
+    "analytics",
+    "app-services",
+    "compute",
+    "containers",
+    "databases",
+    "integration",
+    "iot",
+    "networking",
+    "security",
+    "storage",
+    "identity",
+    "web",
+    "devops",
+    "management-governance",
+    "monitor",
+    "azure-ecosystem",
 }
 # Color/theme variants we'd rather not pick unless asked.
 DEMOTE_RE = re.compile(r"(dark|light|gray|grey)\b", re.I)
@@ -49,8 +71,18 @@ def norm(s: str) -> str:
     return re.sub(r"[^a-z0-9 ]", " ", s.lower()).strip()
 
 
-GENERIC = {"microsoft", "icon", "color", "bw", "mono", "product", "family",
-           "scalable", "service", "azure"}
+GENERIC = {
+    "microsoft",
+    "icon",
+    "color",
+    "bw",
+    "mono",
+    "product",
+    "family",
+    "scalable",
+    "service",
+    "azure",
+}
 
 # Common AWS abbreviations -> the canonical service's cleaned name. When the
 # query is exactly the abbreviation, the canonical service icon is hard-boosted
@@ -156,8 +188,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("query")
     ap.add_argument("-n", type=int, default=5, help="number of candidates")
-    ap.add_argument("--provider", help="restrict to providers (comma list): "
-                    "aws, azure, microsoft")
+    ap.add_argument(
+        "--provider", help="restrict to providers (comma list): " "aws, azure, microsoft"
+    )
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--fetch", metavar="DIR", help="download/copy best match into DIR")
     args = ap.parse_args()
@@ -184,8 +217,7 @@ def main():
     else:
         for r in results:
             loc = r.get("file") or r.get("url", "")
-            print(f"{r['score']:>5}  [{r.get('provider','?'):<9}] "
-                  f"{r['name']:<40} {loc}")
+            print(f"{r['score']:>5}  [{r.get('provider','?'):<9}] " f"{r['name']:<40} {loc}")
         if args.fetch and results and results[0].get("local_path"):
             print(f"\nFetched -> {results[0]['local_path']}")
 
