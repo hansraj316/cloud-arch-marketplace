@@ -84,21 +84,23 @@ Page: https://clawhub.ai/hansraj316/cloud-architecture-diagrams
 
 ### Hermes (Nous Research)
 
-Hermes federates ClawHub, so the simplest path is to install the published skill
-(works once its ClawHub security audit clears):
+Hermes federates ClawHub. Install the published skill with the `clawhub:` source:
 
 ```
-hermes skills install cloud-architecture-diagrams
+hermes skills install clawhub:hansraj316/cloud-architecture-diagrams
 ```
 
-For a direct GitHub **tap**, Hermes scans a top-level `skills/<name>/` directory.
-This repo keeps the skill under `plugins/.../skills/` (the Claude Code plugin
-layout), so add a top-level `skills/cloud-architecture-diagrams/` if you want
-native tap discovery without ClawHub:
+Hermes runs a security scan on community skills and returns a **CAUTION** verdict
+here (it flags the bundled `pip install` setup notes and the icon file count), so
+add `--force` to proceed:
 
 ```
-hermes skills tap add hansraj316/cloud-arch-marketplace
+hermes skills install clawhub:hansraj316/cloud-architecture-diagrams --force
 ```
+
+(A direct GitHub tap — `hermes skills tap add owner/repo` — only scans a top-level
+`skills/<name>/` directory; this repo nests the skill under `plugins/.../skills/`
+for the Claude Code plugin layout, so use the ClawHub source above.)
 
 Once installed in any agent, the skill activates automatically when you ask it to
 draw or recreate an Azure/AWS/GCP architecture diagram.
