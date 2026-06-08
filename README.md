@@ -1,4 +1,4 @@
-# Cloud Architecture Diagrams — Claude Code plugin
+# Cloud Architecture Diagrams — a portable Agent Skill
 
 A Claude Code plugin that builds **editable cloud architecture diagrams** for
 Azure/Microsoft, AWS, and GCP, exporting the **same diagram as both
@@ -29,10 +29,15 @@ cloud-arch-marketplace/
             └── cloud-architecture-diagrams/   # the skill (SKILL.md, scripts, assets…)
 ```
 
-## Install (from the published repo)
+## Install in your agent
 
-In Claude Code — **add via Git** (relative plugin paths only resolve for git-added
-marketplaces, not raw `marketplace.json` URLs):
+This is an [Agent Skill](https://agentskills.io) (`SKILL.md`), so the same skill
+runs across several agents. Pick your tool:
+
+### Claude Code
+
+Add via Git (relative plugin paths only resolve for git-added marketplaces, not
+raw `marketplace.json` URLs):
 
 ```
 /plugin marketplace add hansraj316/cloud-arch-marketplace
@@ -46,8 +51,42 @@ Test from a local clone first if you like:
 /plugin install cloud-architecture-diagrams@cloud-arch-marketplace
 ```
 
-Once installed, the skill activates automatically when you ask Claude to draw or
-recreate an Azure/AWS/GCP architecture diagram.
+### GitHub Copilot CLI
+
+Copilot reads the same `.claude-plugin/marketplace.json`:
+
+```
+copilot plugin marketplace add hansraj316/cloud-arch-marketplace
+copilot plugin install cloud-architecture-diagrams
+```
+
+(Copilot also auto-discovers skills placed under `.github/skills`, `.claude/skills`,
+or `~/.copilot/skills`.)
+
+### OpenClaw (via ClawHub)
+
+Published to ClawHub as a curated-icon build (trimmed to fit ClawHub's per-publish
+file limits; the full ~3,900-icon set ships in this repo for Claude Code / Copilot /
+Hermes):
+
+```
+openclaw skills install cloud-architecture-diagrams
+# or:  clawhub install cloud-architecture-diagrams
+```
+
+Page: https://clawhub.ai/hansraj316/cloud-architecture-diagrams
+
+### Hermes (Nous Research)
+
+Hermes installs Agent Skills from GitHub taps and Claude-marketplace repos:
+
+```
+hermes skills tap add hansraj316/cloud-arch-marketplace
+hermes skills install hansraj316/cloud-arch-marketplace/cloud-architecture-diagrams
+```
+
+Once installed in any of these, the skill activates automatically when you ask the
+agent to draw or recreate an Azure/AWS/GCP architecture diagram.
 
 ## Use it
 
