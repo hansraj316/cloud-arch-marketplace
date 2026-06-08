@@ -53,15 +53,21 @@ Test from a local clone first if you like:
 
 ### GitHub Copilot CLI
 
-Copilot reads the same `.claude-plugin/marketplace.json`:
+Requires a Copilot CLI build with **Agent Skills** support (shipped Dec 2025+;
+older builds such as `0.0.x` don't have it). Copilot auto-discovers skills from
+`.github/skills`, `.claude/skills`, or `~/.copilot/skills` — clone this repo and
+drop the skill folder into one of those:
 
 ```
-copilot plugin marketplace add hansraj316/cloud-arch-marketplace
-copilot plugin install cloud-architecture-diagrams
+git clone https://github.com/hansraj316/cloud-arch-marketplace
+cp -R cloud-arch-marketplace/plugins/cloud-architecture-diagrams/skills/cloud-architecture-diagrams \
+  ~/.copilot/skills/
 ```
 
-(Copilot also auto-discovers skills placed under `.github/skills`, `.claude/skills`,
-or `~/.copilot/skills`.)
+Newer Copilot builds also support a plugin marketplace
+(`copilot plugin marketplace add hansraj316/cloud-arch-marketplace`) that reads the
+same `.claude-plugin/marketplace.json` — use it if your CLI version has the
+`plugin` command.
 
 ### OpenClaw (via ClawHub)
 
@@ -78,15 +84,24 @@ Page: https://clawhub.ai/hansraj316/cloud-architecture-diagrams
 
 ### Hermes (Nous Research)
 
-Hermes installs Agent Skills from GitHub taps and Claude-marketplace repos:
+Hermes federates ClawHub, so the simplest path is to install the published skill
+(works once its ClawHub security audit clears):
+
+```
+hermes skills install cloud-architecture-diagrams
+```
+
+For a direct GitHub **tap**, Hermes scans a top-level `skills/<name>/` directory.
+This repo keeps the skill under `plugins/.../skills/` (the Claude Code plugin
+layout), so add a top-level `skills/cloud-architecture-diagrams/` if you want
+native tap discovery without ClawHub:
 
 ```
 hermes skills tap add hansraj316/cloud-arch-marketplace
-hermes skills install hansraj316/cloud-arch-marketplace/cloud-architecture-diagrams
 ```
 
-Once installed in any of these, the skill activates automatically when you ask the
-agent to draw or recreate an Azure/AWS/GCP architecture diagram.
+Once installed in any agent, the skill activates automatically when you ask it to
+draw or recreate an Azure/AWS/GCP architecture diagram.
 
 ## Use it
 
