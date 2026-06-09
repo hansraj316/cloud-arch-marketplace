@@ -6,11 +6,7 @@ to one or two lines; prune the log when it passes ~30 entries.
 
 ## In flight
 
-- PR #4 `fix/ci-2026-06-09` — CI fix (ruff + black + `--validate` flag +
-  mypy `_seed`). **Merge-ready**: CI green on all 3 Python jobs at `7a857a0`
-  (2026-06-09 17:46 UTC). Still marked draft; maintainer merges.
-- PR #5 `claude/amazing-hopper-y6nc7i` — loop-engineering setup. CI red until
-  PR #4 merges into `main`; rebase afterwards.
+(nothing — all clear as of 2026-06-09)
 
 ## Backlog
 
@@ -30,3 +26,6 @@ to one or two lines; prune the log when it passes ~30 entries.
 - 2026-06-09 pass 2: added loop scaffolding (`9b63d7f`); confirmed PR #4 CI
   green → merge-ready. PR #5 CI red as expected (inherits main's ruff
   errors); next pass: rebase #5 once #4 merges.
+- 2026-06-09 pass 3: maintainer authorized merges. PR #4 squash-merged to
+  main (`8eb49a1`); rebased #5 onto it, local GATE PASS, merged #5. Loop
+  empty — next work comes from `enhancement`/`feature` issues.
