@@ -12,7 +12,6 @@ Usage:
     python find_drawio_shape.py "Lambda" --provider aws -n 5
     python find_drawio_shape.py "BigQuery" --provider gcp
 """
-
 import argparse
 import json
 import sys
@@ -39,17 +38,15 @@ def main():
         allow = {p.strip() for p in args.provider.split(",")}
         shapes = [s for s in shapes if s["shape_provider"] in allow]
 
-    ranked = sorted(shapes, key=lambda s: icon_score(args.query, s), reverse=True)[: args.n]
+    ranked = sorted(shapes, key=lambda s: icon_score(args.query, s), reverse=True)[:args.n]
     out = [dict(s, score=round(icon_score(args.query, s), 3)) for s in ranked]
 
     if args.json:
         print(json.dumps(out, ensure_ascii=False, indent=2))
     else:
         for r in out:
-            print(
-                f"{r['score']:>5}  [{r['shape_provider']:<5}] "
-                f"{r['name']:<34} {r['key']}  {r.get('color','')}"
-            )
+            print(f"{r['score']:>5}  [{r['shape_provider']:<5}] "
+                  f"{r['name']:<34} {r['key']}  {r.get('color','')}")
 
 
 if __name__ == "__main__":

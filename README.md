@@ -1,12 +1,13 @@
-# Cloud Architecture Diagrams — Claude Code plugin
+# Cloud Architecture Diagrams — a portable Agent Skill
 
 A Claude Code plugin that builds **editable cloud architecture diagrams** for
 Azure/Microsoft, AWS, and GCP, exporting the **same diagram as both
 `.excalidraw` and `.drawio`** with the official vendor icons embedded.
 
-- ~3,900 icons bundled **offline**: AWS (809), Azure official (626), GCP (45),
-  and the full Microsoft set (2,431 — Dynamics 365, Power Platform, Fabric,
-  M365/Teams, Intune, Entra, Purview, …).
+- ~5,500 icons bundled **offline**: AWS (809), Azure official (626), GCP (45),
+  the full Microsoft set (2,431 — Dynamics 365, Power Platform, M365/Teams,
+  Intune, Entra, Purview, …), and the official **Microsoft Fabric** Fluent set
+  (1,584 — Lakehouse, Warehouse, Data Factory, Power BI, …, every size/variant).
 - Two inputs: describe the architecture in text, or upload a screenshot to
   recreate.
 - Optional **native draw.io vector stencils** for AWS/GCP (`drawio_shapes`),
@@ -29,10 +30,15 @@ cloud-arch-marketplace/
             └── cloud-architecture-diagrams/   # the skill (SKILL.md, scripts, assets…)
 ```
 
-## Install (from the published repo)
+## Install in your agent
 
-In Claude Code — **add via Git** (relative plugin paths only resolve for git-added
-marketplaces, not raw `marketplace.json` URLs):
+This is an [Agent Skill](https://agentskills.io) (`SKILL.md`), so the same skill
+runs across several agents. Pick your tool:
+
+### Claude Code
+
+Add via Git (relative plugin paths only resolve for git-added marketplaces, not
+raw `marketplace.json` URLs):
 
 ```
 /plugin marketplace add hansraj316/cloud-arch-marketplace
@@ -46,8 +52,47 @@ Test from a local clone first if you like:
 /plugin install cloud-architecture-diagrams@cloud-arch-marketplace
 ```
 
-Once installed, the skill activates automatically when you ask Claude to draw or
-recreate an Azure/AWS/GCP architecture diagram.
+### GitHub Copilot CLI
+
+Requires a Copilot CLI build with **Agent Skills** support (Dec 2025+; older `0.0.x`
+builds don't have it). Copilot auto-discovers skills from `.github/skills`,
+`.claude/skills`, or `~/.copilot/skills` — clone this repo and drop the skill folder
+into one of those:
+
+```
+git clone https://github.com/hansraj316/cloud-arch-marketplace
+cp -R cloud-arch-marketplace/plugins/cloud-architecture-diagrams/skills/cloud-architecture-diagrams \
+  ~/.copilot/skills/
+```
+
+Newer Copilot builds also support `copilot plugin marketplace add hansraj316/cloud-arch-marketplace`
+(reads the same `.claude-plugin/marketplace.json`).
+
+### OpenClaw (via ClawHub)
+
+Published to ClawHub as a curated build (trimmed to fit ClawHub's per-publish file
+limit — the full ~5,500-icon set, including all 1,584 Fabric icons, ships in this
+repo for Claude Code / Copilot / Hermes):
+
+```
+openclaw skills install cloud-architecture-diagrams
+# or:  clawhub install cloud-architecture-diagrams
+```
+
+Page: https://clawhub.ai/hansraj316/cloud-architecture-diagrams
+
+### Hermes (Nous Research)
+
+Hermes federates ClawHub; install with the `clawhub:` source (add `--force` — the
+community-source scanner returns a CAUTION verdict on the bundled `pip install`
+setup notes and icon count):
+
+```
+hermes skills install clawhub:hansraj316/cloud-architecture-diagrams --force
+```
+
+Once installed in any agent, the skill activates automatically when you ask it to
+draw or recreate an Azure/AWS/GCP/Fabric architecture diagram.
 
 ## Use it
 

@@ -5,11 +5,3 @@ _icon_cache/
 *.excalidraw
 *.drawio
 *.png
-
-# Python tooling / virtualenvs
-.venv/
-venv/
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-*.egg-info/

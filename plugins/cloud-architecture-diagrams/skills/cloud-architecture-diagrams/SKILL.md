@@ -42,21 +42,27 @@ choosing icons and laying things out — not on file plumbing.
 
 ## Icon sources (providers)
 
-The skill knows ~3,900 icons across four providers, all bundled offline. Pick
-the one that matches the cloud you're drawing:
+The skill knows ~5,500 icons across five providers, all bundled offline. Pick
+the one that matches what you're drawing:
 
 | Provider | What it covers | Where the icons live |
 |----------|----------------|----------------------|
 | `aws` | Official AWS Architecture Icons — EC2, S3, Lambda, VPC, ECS/EKS, RDS, DynamoDB, etc. (~800) | **bundled** in `assets/icons/aws/` (offline) |
 | `azure` | Official Microsoft Azure service icons V23 (~626) | **bundled** in `assets/icons/azure/` (offline) |
 | `gcp` | Official Google Cloud icons — Compute Engine, GKE, BigQuery, Cloud Run, Vertex AI, Cloud Storage, etc. (a curated ~45-icon set of core products + category tiles) | **bundled** in `assets/icons/gcp/` (offline) |
-| `microsoft` | The broadest Microsoft set, now **bundled offline** (~2,430): the official Power Platform pack (Power Apps, Power Automate, Power Pages, Copilot Studio, AI Builder, Dataverse, Agent 365) + the official Dynamics 365 pack (Sales, Customer Service, Field Service, Finance, Business Central, Commerce, Supply Chain, Customer Insights, Project Operations, HR, …) + the msicons.com set (Azure services, Microsoft Fabric, Teams, Entra, Intune, Purview, Planner, …) | **bundled** in `assets/icons/microsoft/` (offline) |
+| `microsoft` | The broadest Microsoft set, **bundled offline** (~2,430): Power Platform (Power Apps, Power Automate, Power Pages, Copilot Studio, AI Builder, Dataverse, Agent 365), Dynamics 365 (Sales, Customer Service, Field Service, Finance, Business Central, Commerce, Supply Chain, Customer Insights, …), plus Azure services, Microsoft Fabric brand tiles, Teams, Entra, Intune, Purview, Planner | **bundled** in `assets/icons/microsoft/` (offline) |
+| `fabric` | Official **Microsoft Fabric** Fluent icon set (`@fabric-msft`, ~1,580): Lakehouse, Warehouse, Data Factory, Data Engineering, Data Science, Power BI, Eventhouse, Real-Time, Purview, Copilot, etc. Ships **every size (12/16/20/24/28/32/40/48/64 px) and variant (color, item, filled, regular)** of each icon | **bundled** in `assets/icons/fabric/` (offline) |
 
 **Always pin the provider in the spec** (`"provider": "aws"`, `"azure"`, `"gcp"`,
-or `"microsoft"`). For mixed Microsoft work (Power Platform + Azure) use
-`"microsoft"` (the default) or `"providers": ["azure","microsoft"]`. A single
-node can override with its own `"provider"` (e.g. an AWS diagram that also shows
-an Entra ID logo → that node uses `microsoft`).
+`"microsoft"`, or `"fabric"`). For mixed Microsoft work (Power Platform + Azure)
+use `"microsoft"` or `"providers": ["azure","microsoft"]`. A single node can
+override with its own `"provider"` (e.g. a `fabric` diagram that also shows an
+Entra ID logo → that node uses `microsoft`).
+
+**Fabric sizing:** because the `fabric` pack carries every size, a bare query
+like `"Data Warehouse"` returns the diagram-friendly **48px color** variant by
+default; pin a specific one with `"icon": "Data Warehouse 24 color"` or
+`"Lakehouse 32 item"` if you need it.
 
 > **GCP coverage is partial.** The bundled Google set is a curated subset (core
 > products + category tiles). Services not in it (e.g. Pub/Sub, Cloud Functions,

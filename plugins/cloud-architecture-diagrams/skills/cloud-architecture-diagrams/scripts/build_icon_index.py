@@ -19,7 +19,6 @@ Usage:
     python build_icon_index.py                # fetch bundle, write index
     python build_icon_index.py --bundle x.js  # use a local bundle file
 """
-
 import argparse
 import json
 import re
@@ -32,18 +31,8 @@ OUT = Path(__file__).resolve().parent.parent / "references" / "icon-index.json"
 
 # Color/theme suffixes and prefixes that are noise for matching.
 NOISE = [
-    "_scalable",
-    "_Light",
-    "_Dark",
-    "_Gray",
-    "_Grey",
-    "_Blue",
-    "_blue",
-    "dark-blue-",
-    "light-blue-",
-    "blue-",
-    "gray-",
-    "grey-",
+    "_scalable", "_Light", "_Dark", "_Gray", "_Grey", "_Blue", "_blue",
+    "dark-blue-", "light-blue-", "blue-", "gray-", "grey-",
 ]
 
 
@@ -75,7 +64,7 @@ def humanize(filename: str) -> str:
 
 def tokens(name: str, category: str) -> str:
     base = re.sub(r"[^a-z0-9 ]", " ", f"{name} {category}".lower())
-    collapsed = base.replace(" ", "")  # 'open ai' -> 'openai'
+    collapsed = base.replace(" ", "")          # 'open ai' -> 'openai'
     return f"{base} {collapsed}".strip()
 
 
@@ -87,16 +76,14 @@ def build(bundle: str) -> list[dict]:
         category = parts[2] if len(parts) > 3 else ""
         filename = parts[-1]
         name = humanize(filename)
-        out.append(
-            {
-                "provider": "microsoft",
-                "path": p,
-                "url": SITE + p,
-                "category": category,
-                "name": name,
-                "search": tokens(name, category),
-            }
-        )
+        out.append({
+            "provider": "microsoft",
+            "path": p,
+            "url": SITE + p,
+            "category": category,
+            "name": name,
+            "search": tokens(name, category),
+        })
     return out
 
 
@@ -104,7 +91,6 @@ def bundle_svgs(entries, root):
     """Download each entry's SVG into assets/icons/microsoft/<cat>/ and set
     entry['file'] so the Microsoft set works offline."""
     import urllib.parse
-
     base = root / "assets" / "icons" / "microsoft"
     ok = 0
     for e in entries:
@@ -128,12 +114,9 @@ def bundle_svgs(entries, root):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bundle", help="path to a local msicons bundle .js (skip download)")
-    ap.add_argument(
-        "--offline",
-        action="store_true",
-        help="also download every SVG into assets/icons/microsoft/ so "
-        "the Microsoft set works without network",
-    )
+    ap.add_argument("--offline", action="store_true",
+                    help="also download every SVG into assets/icons/microsoft/ so "
+                         "the Microsoft set works without network")
     args = ap.parse_args()
 
     bundle = Path(args.bundle).read_text("utf-8", "replace") if args.bundle else fetch_bundle()
