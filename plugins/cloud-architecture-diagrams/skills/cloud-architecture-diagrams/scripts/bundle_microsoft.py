@@ -13,6 +13,7 @@ Usage:
     python bundle_microsoft.py --pp /path/to/PowerPlatform --dyn /path/to/Dynamics
     python bundle_microsoft.py --pp ... --dyn ... --skip-msicons-fetch   # only official
 """
+
 import argparse
 import concurrent.futures as cf
 import json
@@ -97,25 +98,34 @@ def main():
             name, alias = OFFICIAL[stem]
             safe = re.sub(r"[^A-Za-z0-9._-]", "_", svg.name)
             (official_dir / safe).write_bytes(svg.read_bytes())
-            official_entries.append({
-                "provider": "microsoft",
-                "name": name,
-                "category": "power-platform-dynamics",
-                "file": (official_dir / safe).relative_to(ROOT).as_posix(),
-                "search": search_tokens(name, alias),
-            })
+            official_entries.append(
+                {
+                    "provider": "microsoft",
+                    "name": name,
+                    "category": "power-platform-dynamics",
+                    "file": (official_dir / safe).relative_to(ROOT).as_posix(),
+                    "search": search_tokens(name, alias),
+                }
+            )
             official_names.add(norm(name))
     print(f"Imported {len(official_entries)} official Power Platform + Dynamics icons")
 
     # Drop msicons entries that duplicate an official product name.
     before = len(index)
-    index = [e for e in index
-             if not (e.get("provider") == "microsoft" and norm(e["name"]) in official_names)]
+    index = [
+        e
+        for e in index
+        if not (e.get("provider") == "microsoft" and norm(e["name"]) in official_names)
+    ]
     print(f"Removed {before - len(index)} msicons duplicates of official products")
 
     # Bundle remaining web-only microsoft icons offline.
     if not args.skip_msicons_fetch:
-        web = [e for e in index if e.get("provider") == "microsoft" and e.get("url") and not e.get("file")]
+        web = [
+            e
+            for e in index
+            if e.get("provider") == "microsoft" and e.get("url") and not e.get("file")
+        ]
         msdir = ICONS / "msicons"
         msdir.mkdir(parents=True, exist_ok=True)
         print(f"Fetching {len(web)} msicons SVGs offline...")

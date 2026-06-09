@@ -23,6 +23,7 @@ Usage (defaults fetch from GitHub):
     python build_drawio_shape_index.py
     python build_drawio_shape_index.py --local /tmp   # use pre-downloaded files
 """
+
 import argparse
 import json
 import re
@@ -32,8 +33,8 @@ from pathlib import Path
 OUT = Path(__file__).resolve().parent.parent / "references" / "drawio-shape-index.json"
 RAW = "https://raw.githubusercontent.com/jgraph/drawio/dev/src/main/webapp"
 STENCILS = {  # provider -> (stencil path, mxgraph package, default fill or None)
-    "aws":   ("stencils/aws4.xml",  "mxgraph.aws4",  None),
-    "gcp":   ("stencils/gcp2.xml",  "mxgraph.gcp2",  None),       # self-colored
+    "aws": ("stencils/aws4.xml", "mxgraph.aws4", None),
+    "gcp": ("stencils/gcp2.xml", "mxgraph.gcp2", None),  # self-colored
     "azure": ("stencils/azure.xml", "mxgraph.azure", "#0078D4"),  # monochrome
 }
 AWS_SIDEBAR = "js/diagramly/sidebar/Sidebar-AWS4.js"
