@@ -4,9 +4,10 @@ A Claude Code plugin that builds **editable cloud architecture diagrams** for
 Azure/Microsoft, AWS, and GCP, exporting the **same diagram as both
 `.excalidraw` and `.drawio`** with the official vendor icons embedded.
 
-- ~3,900 icons bundled **offline**: AWS (809), Azure official (626), GCP (45),
-  and the full Microsoft set (2,431 — Dynamics 365, Power Platform, Fabric,
-  M365/Teams, Intune, Entra, Purview, …).
+- ~5,500 icons bundled **offline**: AWS (809), Azure official (626), GCP (45),
+  the full Microsoft set (2,431 — Dynamics 365, Power Platform, M365/Teams,
+  Intune, Entra, Purview, …), and the official **Microsoft Fabric** Fluent set
+  (1,584 — Lakehouse, Warehouse, Data Factory, Power BI, …, every size/variant).
 - Two inputs: describe the architecture in text, or upload a screenshot to
   recreate.
 - Optional **native draw.io vector stencils** for AWS/GCP (`drawio_shapes`),

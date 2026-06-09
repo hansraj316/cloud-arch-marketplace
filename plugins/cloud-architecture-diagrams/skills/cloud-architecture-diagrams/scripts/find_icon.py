@@ -19,13 +19,12 @@ Usage:
 Exit code is 0 even on weak matches; inspect the score. A score < ~0.35 usually
 means "no good icon — fall back to a plain labeled box."
 """
-
 import argparse
 import json
 import re
 import sys
-import urllib.parse
 import urllib.request
+import urllib.parse
 from difflib import SequenceMatcher
 from pathlib import Path
 
@@ -35,33 +34,12 @@ SITE = "https://msicons.com"
 
 # Brand/product categories an architecture diagram usually wants.
 PREFERRED = {
-    "power-platform",
-    "dynamics-365",
-    "Copilot-studio",
-    "agent-365",
-    "fabric",
-    "entra",
-    "intune",
-    "microsoft-teams",
-    "sharepoint",
-    "Planner",
-    "ai-machine-learning",
-    "analytics",
-    "app-services",
-    "compute",
-    "containers",
-    "databases",
-    "integration",
-    "iot",
-    "networking",
-    "security",
-    "storage",
-    "identity",
-    "web",
-    "devops",
-    "management-governance",
-    "monitor",
-    "azure-ecosystem",
+    "power-platform", "dynamics-365", "Copilot-studio", "agent-365",
+    "fabric", "entra", "intune", "microsoft-teams", "sharepoint", "Planner",
+    "ai-machine-learning", "analytics", "app-services", "compute",
+    "containers", "databases", "integration", "iot", "networking",
+    "security", "storage", "identity", "web", "devops",
+    "management-governance", "monitor", "azure-ecosystem",
 }
 # Color/theme variants we'd rather not pick unless asked.
 DEMOTE_RE = re.compile(r"(dark|light|gray|grey)\b", re.I)
@@ -71,18 +49,8 @@ def norm(s: str) -> str:
     return re.sub(r"[^a-z0-9 ]", " ", s.lower()).strip()
 
 
-GENERIC = {
-    "microsoft",
-    "icon",
-    "color",
-    "bw",
-    "mono",
-    "product",
-    "family",
-    "scalable",
-    "service",
-    "azure",
-}
+GENERIC = {"microsoft", "icon", "color", "bw", "mono", "product", "family",
+           "scalable", "service", "azure"}
 
 # Common AWS abbreviations -> the canonical service's cleaned name. When the
 # query is exactly the abbreviation, the canonical service icon is hard-boosted
@@ -157,6 +125,23 @@ def score(query: str, item: dict) -> float:
     toks = set(search.split())
     if q in toks or (qc and qc in toks):
         s += 0.3
+    # Microsoft Fabric pack ships every size + variant of each icon. When the
+    # query doesn't pin a size, prefer a diagram-friendly default (48px) and the
+    # colored product variant, so a bare "Data Warehouse" returns one good icon
+    # while "Data Warehouse 16" still resolves exactly.
+    if item.get("provider") == "fabric":
+        nt = set(name.split())
+        if not (nt & {"12", "16", "20", "24", "28", "32", "40", "48", "64"} & qt):
+            size_pref = {"48": 0.30, "32": 0.24, "40": 0.20, "64": 0.18,
+                         "24": 0.14, "28": 0.10, "20": 0.06, "16": 0.03}
+            for sz, b in size_pref.items():
+                if sz in nt:
+                    s += b
+                    break
+            if "color" in nt:
+                s += 0.20
+            elif "item" in nt and "non" not in nt:
+                s += 0.10
     return s
 
 
@@ -188,9 +173,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("query")
     ap.add_argument("-n", type=int, default=5, help="number of candidates")
-    ap.add_argument(
-        "--provider", help="restrict to providers (comma list): " "aws, azure, microsoft"
-    )
+    ap.add_argument("--provider", help="restrict to providers (comma list): "
+                    "aws, azure, microsoft")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--fetch", metavar="DIR", help="download/copy best match into DIR")
     args = ap.parse_args()
@@ -217,7 +201,8 @@ def main():
     else:
         for r in results:
             loc = r.get("file") or r.get("url", "")
-            print(f"{r['score']:>5}  [{r.get('provider','?'):<9}] " f"{r['name']:<40} {loc}")
+            print(f"{r['score']:>5}  [{r.get('provider','?'):<9}] "
+                  f"{r['name']:<40} {loc}")
         if args.fetch and results and results[0].get("local_path"):
             print(f"\nFetched -> {results[0]['local_path']}")
 
