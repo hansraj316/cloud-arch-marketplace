@@ -23,6 +23,7 @@ Usage:
 Re-running for the same provider replaces that provider's entries (idempotent).
 The msicons.com web icons (provider "microsoft") are left untouched.
 """
+
 import argparse
 import json
 import re
@@ -84,12 +85,12 @@ def parse_name(filename: str, keep_variants: bool = False) -> tuple[str, str, st
         name = re.sub(r"\s+", " ", re.sub(r"[_\-]+", " ", stem)).strip()
         return name, "", ""
     theme = ""
-    m = re.search(r"_(Light|Dark)$", stem)        # AWS theme variants
+    m = re.search(r"_(Light|Dark)$", stem)  # AWS theme variants
     if m:
         theme = m.group(1)
         stem = stem[: m.start()]
     size = ""
-    m = re.search(r"_(\d{2,3})$", stem)           # AWS size suffix (_48 etc.)
+    m = re.search(r"_(\d{2,3})$", stem)  # AWS size suffix (_48 etc.)
     if m:
         size = m.group(1)
         stem = stem[: m.start()]
@@ -145,8 +146,7 @@ def collect(source: Path, provider: str, keep_variants: bool = False) -> dict:
         if not name:
             continue
         category = svg.parent.name
-        cand = {"src": svg, "name": name, "size": size, "theme": theme,
-                "category": category}
+        cand = {"src": svg, "name": name, "size": size, "theme": theme, "category": category}
         key = name.lower()
         chosen[key] = better(chosen[key], cand) if key in chosen else cand
     return chosen
@@ -155,11 +155,13 @@ def collect(source: Path, provider: str, keep_variants: bool = False) -> dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", required=True)
-    ap.add_argument("--provider", required=True,
-                    help="short id, e.g. 'aws' or 'azure'")
-    ap.add_argument("--all-variants", action="store_true",
-                    help="keep every size/variant as a distinct icon (no "
-                         "size/color de-duplication) — e.g. for Microsoft Fabric")
+    ap.add_argument("--provider", required=True, help="short id, e.g. 'aws' or 'azure'")
+    ap.add_argument(
+        "--all-variants",
+        action="store_true",
+        help="keep every size/variant as a distinct icon (no "
+        "size/color de-duplication) — e.g. for Microsoft Fabric",
+    )
     args = ap.parse_args()
 
     source = Path(args.source)
@@ -173,17 +175,19 @@ def main():
 
     chosen = collect(source, args.provider, args.all_variants)
     entries = []
-    for key, c in sorted(chosen.items()):
+    for _key, c in sorted(chosen.items()):
         safe = re.sub(r"[^A-Za-z0-9._-]", "_", c["src"].name)
         shutil.copyfile(c["src"], dest / safe)
         rel = (dest / safe).relative_to(SKILL_ROOT).as_posix()
-        entries.append({
-            "provider": args.provider,
-            "name": c["name"],
-            "category": c["category"],
-            "file": rel,
-            "search": search_tokens(c["name"], c["category"], args.provider),
-        })
+        entries.append(
+            {
+                "provider": args.provider,
+                "name": c["name"],
+                "category": c["category"],
+                "file": rel,
+                "search": search_tokens(c["name"], c["category"], args.provider),
+            }
+        )
 
     # merge into the index, replacing any prior entries for this provider
     index = json.loads(INDEX.read_text("utf-8")) if INDEX.exists() else []
@@ -194,8 +198,10 @@ def main():
     INDEX.write_text(json.dumps(index, ensure_ascii=False))
 
     print(f"Imported {len(entries)} '{args.provider}' icons -> {dest}")
-    print(f"Index now holds {len(index)} icons across providers: "
-          + ", ".join(sorted({e['provider'] for e in index})))
+    print(
+        f"Index now holds {len(index)} icons across providers: "
+        + ", ".join(sorted({e["provider"] for e in index}))
+    )
 
 
 if __name__ == "__main__":
