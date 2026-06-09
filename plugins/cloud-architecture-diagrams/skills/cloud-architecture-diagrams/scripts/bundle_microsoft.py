@@ -17,7 +17,6 @@ import argparse
 import concurrent.futures as cf
 import json
 import re
-import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path

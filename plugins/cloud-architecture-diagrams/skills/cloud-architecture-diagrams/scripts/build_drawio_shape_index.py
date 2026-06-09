@@ -26,7 +26,6 @@ Usage (defaults fetch from GitHub):
 import argparse
 import json
 import re
-import sys
 import urllib.request
 from pathlib import Path
 

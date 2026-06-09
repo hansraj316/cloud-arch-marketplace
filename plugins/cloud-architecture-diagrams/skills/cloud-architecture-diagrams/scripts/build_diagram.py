@@ -50,12 +50,13 @@ import json
 import re
 import sys
 import time
-import urllib.request
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from find_icon import search as icon_search, score as icon_score
+from find_icon import score as icon_score
+from find_icon import search as icon_search
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 MIN_SHAPE_SCORE = 0.9

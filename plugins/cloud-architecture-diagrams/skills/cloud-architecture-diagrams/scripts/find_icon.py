@@ -23,8 +23,8 @@ import argparse
 import json
 import re
 import sys
-import urllib.request
 import urllib.parse
+import urllib.request
 from difflib import SequenceMatcher
 from pathlib import Path
 

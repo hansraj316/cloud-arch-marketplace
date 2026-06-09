@@ -173,7 +173,7 @@ def main():
 
     chosen = collect(source, args.provider, args.all_variants)
     entries = []
-    for key, c in sorted(chosen.items()):
+    for _key, c in sorted(chosen.items()):
         safe = re.sub(r"[^A-Za-z0-9._-]", "_", c["src"].name)
         shutil.copyfile(c["src"], dest / safe)
         rel = (dest / safe).relative_to(SKILL_ROOT).as_posix()
