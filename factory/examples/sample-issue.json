@@ -1,0 +1,7 @@
+{
+  "number": 0,
+  "title": "Sample: build_diagram.py --version prints the skill version",
+  "body": "When I report a rendering bug I want to say which version of the diagram skill I ran. build_diagram.py should accept --version, print the version from the plugin manifest and exit 0 without needing a spec file.",
+  "url": "",
+  "labels": ["factory"]
+}

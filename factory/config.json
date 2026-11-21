@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "base_branch": "main",
+  "intake_label": "factory",
+  "concurrency": 1,
+  "max_build_rounds": 3,
+  "spec_gate": { "fail_under": 70, "required": true },
+  "budget": { "weekly_usd": 25.0, "daily_usd": 2.5 },
+  "protected": ["factory/**", ".github/**", ".claude/**", "LICENSE", "NOTICE.md"]
+}
