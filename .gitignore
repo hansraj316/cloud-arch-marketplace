@@ -5,3 +5,8 @@ _icon_cache/
 *.excalidraw
 *.drawio
 *.png
+
+# software factory (local state)
+factory/jobs/
+factory/worktrees/
+factory/ledger.jsonl
