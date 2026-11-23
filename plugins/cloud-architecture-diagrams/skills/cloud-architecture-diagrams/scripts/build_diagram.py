@@ -718,7 +718,16 @@ def main():
             for err in errors:
                 print(f"  {err}", file=sys.stderr)
             sys.exit(1)
-        print("Spec is valid.")
+        counts = (
+            f"{len(spec.get('zones') or [])} zones, "
+            f"{len(spec['nodes'])} nodes, "
+            f"{len(spec.get('edges') or [])} edges."
+        )
+        title = spec.get("title")
+        if isinstance(title, str) and title:
+            print(f'Spec is valid: "{title}" with {counts}')
+        else:
+            print(f"Spec is valid: {counts}")
         return
     if args.drawio_shapes:
         spec["drawio_shapes"] = True
