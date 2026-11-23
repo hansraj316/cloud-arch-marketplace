@@ -8,7 +8,7 @@ Issues labeled `factory` become small draft PRs. You merge; the factory never do
 gh auth login && gh auth setup-git
 claude plugin marketplace add hansraj316/software-factory
 claude plugin install software-factory@software-factory --scope project
-uv tool install sddgrade --from git+https://github.com/hansraj316/sdd-grader.git@v0.4.0
+uv tool install sddgrade --from git+https://github.com/hansraj316/sdd-grader.git@a9b081511a1b715028252cf64c85829cb6c2384f
 ```
 
 ## Use
