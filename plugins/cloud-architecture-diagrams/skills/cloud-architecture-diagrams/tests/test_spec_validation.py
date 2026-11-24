@@ -1,5 +1,6 @@
 """Tests for the spec validator (scripts/spec_schema.py)."""
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -94,3 +95,95 @@ def test_cli_validate_good_spec_exits_zero(tmp_path):
     res = _run_build([str(good), "--validate"], tmp_path)
     assert res.returncode == 0
     assert "valid" in res.stdout.lower()
+
+
+# --- --validate success line (issue #8) ---
+
+
+def _zone(zid):
+    return {"id": zid, "x": 0, "y": 0, "width": 100, "height": 100}
+
+
+def _node(nid):
+    return {"id": nid, "x": 0, "y": 0, "width": 50, "height": 50}
+
+
+def _validate_spec(spec, tmp_path):
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(spec))
+    return _run_build([str(path), "--validate"], tmp_path)
+
+
+def test_cli_validate_example_prints_title_and_counts(tmp_path):
+    good = SKILL_ROOT / "assets" / "spec-example.json"
+    res = _run_build([str(good), "--validate"], tmp_path)
+    assert res.returncode == 0
+    assert res.stdout == (
+        'Spec is valid: "MARS Support Architecture" with 3 zones, 13 nodes, 12 edges.\n'
+    )
+
+
+def test_cli_validate_untitled_spec_omits_title(tmp_path):
+    spec = {
+        "zones": [_zone("z1"), _zone("z2")],
+        "nodes": [_node("a"), _node("b"), _node("c")],
+        "edges": [{"from": "a", "to": "b"}, {"from": "b", "to": "c"}],
+    }
+    res = _validate_spec(spec, tmp_path)
+    assert res.returncode == 0
+    assert res.stdout == "Spec is valid: 2 zones, 3 nodes, 2 edges.\n"
+
+
+def test_cli_validate_empty_title_treated_as_untitled(tmp_path):
+    spec = {
+        "title": "",
+        "zones": [_zone("z1"), _zone("z2")],
+        "nodes": [_node("a"), _node("b"), _node("c")],
+        "edges": [{"from": "a", "to": "b"}, {"from": "b", "to": "c"}],
+    }
+    res = _validate_spec(spec, tmp_path)
+    assert res.returncode == 0
+    assert res.stdout == "Spec is valid: 2 zones, 3 nodes, 2 edges.\n"
+
+
+def test_cli_validate_no_zones_key_reports_zero_zones(tmp_path):
+    spec = {
+        "title": "T",
+        "nodes": [_node("a"), _node("b")],
+        "edges": [{"from": "a", "to": "b"}, {"from": "b", "to": "a"}],
+    }
+    res = _validate_spec(spec, tmp_path)
+    assert res.returncode == 0
+    assert res.stdout == 'Spec is valid: "T" with 0 zones, 2 nodes, 2 edges.\n'
+
+
+def test_cli_validate_no_edges_key_reports_zero_edges(tmp_path):
+    spec = {
+        "title": "T",
+        "zones": [_zone("z1"), _zone("z2")],
+        "nodes": [_node("a"), _node("b")],
+    }
+    res = _validate_spec(spec, tmp_path)
+    assert res.returncode == 0
+    assert res.stdout == 'Spec is valid: "T" with 2 zones, 2 nodes, 0 edges.\n'
+
+
+def test_cli_validate_counts_of_one_keep_plural_nouns(tmp_path):
+    spec = {
+        "title": "T",
+        "zones": [_zone("z1")],
+        "nodes": [_node("a")],
+        "edges": [{"from": "a", "to": "a"}],
+    }
+    res = _validate_spec(spec, tmp_path)
+    assert res.returncode == 0
+    assert res.stdout == 'Spec is valid: "T" with 1 zones, 1 nodes, 1 edges.\n'
+
+
+def test_cli_validate_bad_spec_exit_code_stderr_and_empty_stdout(tmp_path):
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"nodes": [], "edges": [{"from": "a", "to": "b"}]}')
+    res = _run_build([str(bad), "--validate"], tmp_path)
+    assert res.returncode == 1
+    assert res.stderr.splitlines()[0] == "Spec validation failed:"
+    assert res.stdout == ""
